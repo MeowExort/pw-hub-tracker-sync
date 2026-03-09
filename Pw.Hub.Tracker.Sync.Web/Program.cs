@@ -15,7 +15,7 @@ builder.Services.Configure<EventProcessorOptions>(builder.Configuration.GetSecti
 
 // DI
 builder.Services.AddSingleton<EventChannel>();
-builder.Services.AddSingleton<IEventRepository>(sp => 
+builder.Services.AddSingleton<IEventRepository>(sp =>
     new EventRepository(builder.Configuration.GetConnectionString("DefaultConnection")!));
 builder.Services.AddHostedService<EventProcessor>();
 
@@ -36,8 +36,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 // Authorization Policies
 builder.Services.AddAuthorizationBuilder()
-                             // Authorization Policies
-                             .AddPolicy("TrackerSyncPolicy", policy =>
+    // Authorization Policies
+    .AddPolicy("TrackerSyncPolicy", policy =>
         policy.RequireAssertion(context =>
         {
             var scopeClaim = context.User.FindFirst("scope")?.Value;
@@ -68,13 +68,13 @@ app.UseAuthorization();
 
 // Minimal API Endpoint
 app.MapPost("/api/events", async (EventDto eventDto, EventChannel channel, CancellationToken ct) =>
-{
-    // Быстро ставим в очередь и возвращаем 202 Accepted
-    await channel.AddEventAsync(eventDto, ct);
-    return Results.Accepted();
-})
-.WithName("PostEvent")
-.WithSummary("Принимает и сохраняет события в пакетном режиме")
-.RequireAuthorization("TrackerSyncPolicy");
+    {
+        // Быстро ставим в очередь и возвращаем 202 Accepted
+        await channel.AddEventAsync(eventDto, ct);
+        return Results.Accepted();
+    })
+    .WithName("PostEvent")
+    .WithSummary("Принимает и сохраняет события в пакетном режиме")
+    .RequireAuthorization("TrackerSyncPolicy");
 
 app.Run();
