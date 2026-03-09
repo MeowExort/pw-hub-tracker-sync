@@ -3,10 +3,6 @@ name: Build and deploy backend
 on:
   push:
     branches: [ "main" ]
-    paths:
-      - "**/**"
-      - "Dockerfile"
-      - ".github/workflows/deploy_backend.yml"
 
 env:
   REGISTRY: ghcr.io
