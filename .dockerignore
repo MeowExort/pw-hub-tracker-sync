@@ -1,0 +1,13 @@
+# .dockerignore
+.idea/
+.git/
+**/bin/
+**/obj/
+*.user
+*.sln.dotSettings.user
+.vs/
+docker-compose.yml
+Dockerfile
+.dockerignore
+node_modules/
+wwwroot/lib/
