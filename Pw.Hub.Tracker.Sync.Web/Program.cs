@@ -1,3 +1,4 @@
+using Prometheus;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Pw.Hub.Tracker.Sync.Web.Data;
@@ -8,6 +9,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddOpenApi();
+
+// Метрики ASP.NET Core
+builder.Services.AddHealthChecks(); // Хорошая практика
 
 // Configuration
 builder.Services.Configure<EventChannelOptions>(builder.Configuration.GetSection("EventProcessor"));
@@ -48,6 +52,9 @@ builder.Services.AddAuthorizationBuilder()
 
 var app = builder.Build();
 
+app.UseMetricServer();
+app.UseHttpMetrics();
+
 // Инициализация базы данных
 using (var scope = app.Services.CreateScope())
 {
@@ -60,6 +67,9 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.UseMetricServer(); // Endpoint /metrics
+app.UseHttpMetrics();  // Стандартные метрики ASP.NET Core
 
 app.UseHttpsRedirection();
 

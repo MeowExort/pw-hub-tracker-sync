@@ -30,5 +30,6 @@ public class EventChannel
     public async ValueTask AddEventAsync(EventDto eventDto, CancellationToken ct = default)
     {
         await Writer.WriteAsync(eventDto, ct);
+        TrackerMetrics.QueueSize.Inc();
     }
 }

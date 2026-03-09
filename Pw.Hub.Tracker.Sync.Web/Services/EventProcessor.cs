@@ -99,11 +99,28 @@ public class EventProcessor(
 
     private async Task FlushBatchAsync(List<EventDto> batch, CancellationToken ct)
     {
+        int count = batch.Count;
+        if (count == 0) return;
+
         try
         {
-            int count = batch.Count;
             logger.LogDebug("Flushing batch of {Count} events", count);
-            await repository.BulkInsertAsync(batch, ct);
+            
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                await repository.BulkInsertAsync(batch, ct);
+            }
+            finally
+            {
+                sw.Stop();
+                TrackerMetrics.BatchProcessingTime.Observe(sw.Elapsed.TotalSeconds);
+            }
+
+            TrackerMetrics.BatchSize.Observe(count);
+            TrackerMetrics.EventsProcessedTotal.Inc(count);
+            TrackerMetrics.QueueSize.Dec(count);
+
             batch.Clear();
         }
         catch (Exception ex)
@@ -111,6 +128,7 @@ public class EventProcessor(
             logger.LogError(ex, "Failed to flush batch to database");
             // В реальной системе здесь могла бы быть логика повторов или сохранения в Dead Letter Queue
             // Для ТЗ просто очищаем батч или оставляем (но тогда он может бесконечно фейлить цикл)
+            TrackerMetrics.QueueSize.Dec(count); // Даже если упало, из внутренней очереди мы их типа "убрали" (или они пропали)
             batch.Clear(); 
         }
     }
