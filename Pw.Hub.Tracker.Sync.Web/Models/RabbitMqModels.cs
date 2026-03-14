@@ -10,9 +10,12 @@ public record RelicLotMessage
 
 public record RelicLotItem
 {
+    [JsonPropertyName("sell_id")]
     public required SellIdDto SellId { get; init; }
+    [JsonPropertyName("arrive_time")]
     public long ArriveTime { get; init; }
     public long Price { get; init; }
+    [JsonPropertyName("relic_item")]
     public required RelicItemDto RelicItem { get; init; }
 }
 
