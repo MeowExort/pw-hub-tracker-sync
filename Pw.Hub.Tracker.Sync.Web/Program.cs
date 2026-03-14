@@ -1,4 +1,5 @@
 using System.Text.Json;
+using MassTransit;
 using Prometheus;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -18,6 +19,20 @@ builder.Services.AddHealthChecks(); // Хорошая практика
 // Configuration
 builder.Services.Configure<EventChannelOptions>(builder.Configuration.GetSection("EventProcessor"));
 builder.Services.Configure<EventProcessorOptions>(builder.Configuration.GetSection("EventProcessor"));
+
+// RabbitMQ (MassTransit)
+builder.Services.AddMassTransit(x =>
+{
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "localhost", "/", h =>
+        {
+            h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
+            h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
+        });
+        cfg.ConfigureEndpoints(context);
+    });
+});
 
 // DI
 builder.Services.AddSingleton<EventChannel>();

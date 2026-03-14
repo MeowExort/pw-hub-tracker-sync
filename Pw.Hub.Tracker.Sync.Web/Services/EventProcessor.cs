@@ -1,3 +1,5 @@
+using System.Text.Json;
+using MassTransit;
 using Microsoft.Extensions.Options;
 using Pw.Hub.Tracker.Sync.Web.Data;
 using Pw.Hub.Tracker.Sync.Web.Models;
@@ -13,6 +15,7 @@ public class EventProcessorOptions
 public class EventProcessor(
     EventChannel channel,
     IEventRepository repository,
+    IPublishEndpoint publishEndpoint,
     IOptions<EventProcessorOptions> options,
     ILogger<EventProcessor> logger) : BackgroundService
 {
@@ -121,6 +124,9 @@ public class EventProcessor(
             TrackerMetrics.EventsProcessedTotal.Inc(count);
             TrackerMetrics.QueueSize.Dec(count);
 
+            // Публикация событий relic-lots-detail в RabbitMQ
+            await PublishRelicLotsAsync(batch, ct);
+
             batch.Clear();
         }
         catch (Exception ex)
@@ -130,6 +136,30 @@ public class EventProcessor(
             // Для ТЗ просто очищаем батч или оставляем (но тогда он может бесконечно фейлить цикл)
             TrackerMetrics.QueueSize.Dec(count); // Даже если упало, из внутренней очереди мы их типа "убрали" (или они пропали)
             batch.Clear(); 
+        }
+    }
+
+    private async Task PublishRelicLotsAsync(List<EventDto> batch, CancellationToken ct)
+    {
+        var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+        foreach (var evt in batch.Where(e => e.EventType == "relic-lots-detail"))
+        {
+            try
+            {
+                var lots = JsonSerializer.Deserialize<List<RelicLotItem>>(evt.Json, jsonOptions);
+                if (lots is null) continue;
+
+                await publishEndpoint.Publish(new RelicLotMessage
+                {
+                    Server = evt.Server,
+                    Lots = lots
+                }, ct);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to publish relic-lots-detail event to RabbitMQ for server {Server}", evt.Server);
+            }
         }
     }
 }
